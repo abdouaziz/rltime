@@ -1,11 +1,23 @@
-import wolof
 import asyncio
 import websockets
+
 import torch, librosa
 from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor
+
 import base64
-import wave
+import json
 import io
+
+import logging
+
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s - %(filename)s - %(name)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+
+logger = logging.getLogger(__name__)
 
 
 class Speech2Text:
@@ -30,21 +42,35 @@ class Speech2Text:
         return self.processor.decode(pred_ids[0])
 
 
-async def reporter(websocket):
-    asr_model = Speech2Text()
-    input_base = await websocket.recv()
-    frames = base64.b64decode(input_base["audio_data"])
+class Server:
+    def __init__(self, host, port):
+        self.host = host
+        self.port = port
+        self.speech2text = Speech2Text()
 
-    transcription = asr_model(frames)
+    async def __call__(self, websocket):
+        while True:
+            try:
+                data = await websocket.recv()
+                data = json.loads(data)
+                audio_data = data["audio_data"]
+                audio_data = base64.b64decode(audio_data)
+                text = self.speech2text(audio_data)
+                await websocket.send(json.dumps({"text": text}))
+            except websockets.exceptions.ConnectionClosedError as e:
+                logging.error(e)
+                assert e.code == 4008
+                break
+            except Exception as e:
+                logging.error(e)
+                assert False, "Not a websocket 4008 error"
 
-    await websocket.send(transcription)
-    print(f">>> {transcription}")
-
-
-async def main():
-    async with websockets.serve(reporter, "localhost", 8765):
-        await asyncio.Future()  # run forever
+    def start(self):
+        start_server = websockets.serve(self, self.host, self.port)
+        asyncio.get_event_loop().run_until_complete(start_server)
+        asyncio.get_event_loop().run_forever()
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    server = Server(host="localhost", port=8765)
+    server.start()
