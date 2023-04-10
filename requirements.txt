@@ -1,0 +1,7 @@
+pyaudio 
+requests 
+websockets
+wolof
+pydantic
+transformers
+torch
