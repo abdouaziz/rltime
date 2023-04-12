@@ -34,9 +34,10 @@ async def send_receive():
             while True:
                 try:
                     data = stream.read(FRAMES_PER_BUFFER)
-                    data = base64.b64encode(data).decode("utf-8")
-                    json_data = json.dumps({"audio_data": str(data)})
-                    await _ws.send(json_data)
+                    # data = base64.b64encode(data).decode("utf-8")
+                    # json_data = json.dumps({"audio_data": str(data)})
+                    await asyncio.sleep(1)
+                    await _ws.send(data)
                 except websockets.exceptions.ConnectionClosedError as e:
                     print(e)
                     assert e.code == 4008
