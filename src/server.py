@@ -13,6 +13,7 @@ import logging
 import numpy as np
 
 logging.basicConfig(
+    filename="server.log",
     level=logging.DEBUG,
     format="%(asctime)s - %(filename)s - %(name)s - %(levelname)s - %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",

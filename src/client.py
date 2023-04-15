@@ -4,63 +4,47 @@ import asyncio
 import base64
 import json
 from config import settings
-
+from server import logger
 
 FRAMES_PER_BUFFER = settings.frames_per_buffer
 FORMAT = pyaudio.paInt16
 CHANNELS = settings.channels
 RATE = settings.rate
 
-p = pyaudio.PyAudio()
 
-stream = p.open(
-    format=FORMAT,
-    channels=CHANNELS,
-    rate=RATE,
-    input=True,
-    frames_per_buffer=FRAMES_PER_BUFFER,
-)
+class Client:
+    def __init__(self, host, port):
+        self.host = host
+        self.port = port
+        self.url = f"ws://{self.host}:{self.port}"
+        self.p = pyaudio.PyAudio()
+        self.stream = self.p.open(format=FORMAT,
+                                  channels=CHANNELS,
+                                  rate=RATE,
+                                  input=True,
+                                  frames_per_buffer=FRAMES_PER_BUFFER)
 
+    async def send_audio(self):
+        while True:
+            data = self.stream.read(FRAMES_PER_BUFFER)
+            await self.websocket.send(data)
 
-URL = "ws://localhost:8765"
+    async def receive_audio(self):
+        while True:
+            result_str = await self.websocket.recv()
+            text = json.loads(result_str)["text"]
+            print(text)
+            #self.stream.write(data)
 
+    async def connect(self):
+        self.websocket = await websockets.connect(self.url)
+        await self.websocket.send(json.dumps({"type": "client"}))
+        await asyncio.gather(self.send_audio(), self.receive_audio())
 
-async def send_receive():
-    async with websockets.connect(
-        URL, ping_interval=settings.ping_interval, ping_timeout=settings.ping_timeout
-    ) as _ws:
-
-        async def send():
-            while True:
-                try:
-                    data = stream.read(FRAMES_PER_BUFFER)
-                    # data = base64.b64encode(data).decode("utf-8")
-                    # json_data = json.dumps({"audio_data": str(data)})
-                    await asyncio.sleep(1)
-                    await _ws.send(data)
-                except websockets.exceptions.ConnectionClosedError as e:
-                    print(e)
-                    assert e.code == 4008
-                    break
-                except Exception as e:
-                    assert False, "Not a websocket 4008 error"
-                await asyncio.sleep(0.01)
-
-            return True
-
-        async def receive():
-            while True:
-                try:
-                    result_str = await _ws.recv()
-                    print(json.loads(result_str)["text"])
-                except websockets.exceptions.ConnectionClosedError as e:
-                    print(e)
-                    assert e.code == 4008
-                    break
-                except Exception as e:
-                    assert False, "Not a websocket 4008 error"
-
-        send_result, receive_result = await asyncio.gather(send(), receive())
+    def run(self):
+        asyncio.run(self.connect())
 
 
-asyncio.run(send_receive())
+if __name__ == "__main__":
+    client = Client(settings.host, settings.port)
+    client.run()
