@@ -1,15 +1,24 @@
 import pyaudio
 import websockets
 import asyncio
-import base64
 import json
 from config import settings
-from server import logger
-
+ 
 FRAMES_PER_BUFFER = settings.frames_per_buffer
 FORMAT = pyaudio.paInt16
 CHANNELS = settings.channels
 RATE = settings.rate
+
+audio = pyaudio.PyAudio()
+
+stream = audio.open(
+    format=FORMAT,
+    channels=CHANNELS,
+    rate=RATE,
+    input=True,
+    frames_per_buffer=FRAMES_PER_BUFFER,
+)
+
 
 
 class Client:
@@ -23,28 +32,33 @@ class Client:
                                   rate=RATE,
                                   input=True,
                                   frames_per_buffer=FRAMES_PER_BUFFER)
+        
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.stream.stop_stream()
+        self.stream.close()
+        self.p.terminate()
+        return False
+    
 
-    async def send_audio(self):
+    async def send(self, websocket):
         while True:
             data = self.stream.read(FRAMES_PER_BUFFER)
-            await self.websocket.send(data)
+            await asyncio.sleep(1)
+            await websocket.send(data)
 
-    async def receive_audio(self):
+    async def recv(self, websocket):
         while True:
-            result_str = await self.websocket.recv()
-            text = json.loads(result_str)["text"]
+            data = await websocket.recv()
+            text =json.loads(data)["text"]
             print(text)
-            #self.stream.write(data)
 
-    async def connect(self):
-        self.websocket = await websockets.connect(self.url)
-        await self.websocket.send(json.dumps({"type": "client"}))
-        await asyncio.gather(self.send_audio(), self.receive_audio())
-
-    def run(self):
-        asyncio.run(self.connect())
-
-
+    async def run(self):
+        async with  websockets.connect(self.url) as websocket:
+            await asyncio.gather(self.send(websocket), self.recv(websocket))
+        
 if __name__ == "__main__":
-    client = Client(settings.host, settings.port)
-    client.run()
+
+    client = Client("localhost", 8765)
+    asyncio.get_event_loop().run_until_complete(client.run())
+    asyncio.get_event_loop().run_forever()
+         
