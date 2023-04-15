@@ -23,11 +23,11 @@ logger = logging.getLogger(__name__)
 
 
 class Speech2Text:
-    def __init__(self, model_name="abdouaziiz/wav2vec2-xls-r-300m-wolof"):
+    def __init__(self, model_name):
         self.model = Wav2Vec2ForCTC.from_pretrained(model_name)
         self.processor = Wav2Vec2Processor.from_pretrained(model_name)
 
-    def wav2feature(self, speech_array , sampling_rate=16000):
+    def wav2feature(self, speech_array, sampling_rate=16000):
         # speech_array, sampling_rate = librosa.load(path, sr=16000)
         return self.processor(
             speech_array, sampling_rate=sampling_rate, padding=True, return_tensors="pt"
@@ -39,18 +39,21 @@ class Speech2Text:
 
     def __call__(self, speech_array):
 
-        audio_data = librosa.util.buf_to_float(speech_array, n_bytes=2, dtype=np.float32)
+        audio_data = librosa.util.buf_to_float(
+            speech_array, n_bytes=2, dtype=np.float32
+        )
         features = self.wav2feature(audio_data)
         logits = self.feature2logits(features)
         predicted_ids = torch.argmax(logits, dim=-1)
         transcription = self.processor.batch_decode(predicted_ids)[0]
         return transcription
- 
+
+
 class Server:
-    def __init__(self, host, port):
+    def __init__(self, host, port , model_name="abdouaziiz/wav2vec2-xls-r-300m-wolof"):
         self.host = host
         self.port = port
-        self.speech2text = Speech2Text()
+        self.speech2text = Speech2Text(model_name=model_name)
 
     async def __call__(self, websocket):
         while True:
@@ -74,6 +77,7 @@ class Server:
         start_server = websockets.serve(self, self.host, self.port)
         asyncio.get_event_loop().run_until_complete(start_server)
         asyncio.get_event_loop().run_forever()
+
 
 if __name__ == "__main__":
     server = Server("localhost", 8765)
