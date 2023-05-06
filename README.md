@@ -5,7 +5,7 @@ Waxal is a real-time assistant that helps you manage your time and tasks. It is 
 
 **Note**: Before getting started, make sure to create a `.env` file and add your API key to it, as follows:
 ```python
-FRAMES_PER_BUFFER = 16000
+FRAMES_PER_BUFFER = 32000
 CHANNELS = 1
 RATE = 16000
 PING_INTERVAL = 5
