@@ -14,7 +14,7 @@ OPENAI_API_KEY = YOUR_API_KEY
 ```
 
 ## Installation and Usage
-```bash
+```python
 git clone https://github.com/abdouaziz/rltime.git
 cd rltime
 pip install -r requirements.txt
