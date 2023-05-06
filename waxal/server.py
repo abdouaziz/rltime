@@ -4,13 +4,16 @@ import websockets
 import torch, librosa
 from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor
 
-import base64
 import json
-import io
 
 import logging
 
 import numpy as np
+from config import settings
+import openai
+
+
+openai.api_key = settings.openai_api_key
 
 logging.basicConfig(
     filename="server.log",
@@ -23,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 class Speech2Text:
-    def __init__(self, model_name):
+    def __init__(self, model_name="Ilyes/wav2vec2-large-xlsr-53-french"):
         self.model = Wav2Vec2ForCTC.from_pretrained(model_name)
         self.processor = Wav2Vec2Processor.from_pretrained(model_name)
 
@@ -49,20 +52,51 @@ class Speech2Text:
         return transcription
 
 
+class Agent:
+    def __init__(self, model_name="gpt-3.5-turbo", temperature=0.1):
+        self.model_name = model_name
+        self.temperature = temperature
+
+    def get_completion_from_messages(self, messages):
+        response = openai.ChatCompletion.create(
+            model=self.model_name, messages=messages, temperature=self.temperature
+        )
+
+        return response.choices[0].message["content"]
+
+    def __call__(self, prompt):
+        agent_context = [
+            {"role": "system", "content": "repondre comme un assistant"},
+            {"role": "user", "content": "bonjour comment tu vas"},
+            {
+                "role": "assistant",
+                "content": "oui ca va en quoi je peux vous aider ? Monsieur",
+            },
+        ]
+
+        agent_context.append({"role": "user", "content": prompt})
+
+        response = self.get_completion_from_messages(agent_context)
+
+        agent_context.append({"role": "assistant", "content": response})
+
+        return response
+
+
 class Server:
     def __init__(self, host, port , model_name="abdouaziiz/wav2vec2-xls-r-300m-wolof"):
         self.host = host
         self.port = port
-        self.speech2text = Speech2Text(model_name=model_name)
+        self.speech2text = Speech2Text()
+        self.agent = Agent()
 
     async def __call__(self, websocket):
         while True:
             try:
                 data = await websocket.recv()
-                # data = json.loads(data)
-                # audio_data = data["audio_data"]
-                # audio_data = base64.b64decode(audio_data)
                 text = self.speech2text(data)
+                await asyncio.sleep(1)
+                text = self.agent(text)
                 await websocket.send(json.dumps({"text": text}))
             except websockets.exceptions.ConnectionClosedError as e:
                 logging.error(e)
