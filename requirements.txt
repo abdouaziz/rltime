@@ -3,4 +3,8 @@ requests
 websockets
 pydantic
 transformers
+librosa
 torch
+openai
+pygame
+gtts

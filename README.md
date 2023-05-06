@@ -4,7 +4,7 @@
 Waxal is a real-time assistant that helps you manage your time and tasks. It is based on gpt-3.5-turbo and utilizes the [OpenAI API](https://beta.openai.com/).
 
 **Note**: Before getting started, make sure to create a `.env` file and add your API key to it, as follows:
-```bash
+```python
 FRAMES_PER_BUFFER = 16000
 CHANNELS = 1
 RATE = 16000
