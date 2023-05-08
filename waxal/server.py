@@ -8,6 +8,8 @@ import json
 
 import logging
 
+from langdetect import detect
+
 import numpy as np
 from config import settings
 import openai
@@ -78,13 +80,13 @@ class Agent:
 
         response = self.get_completion_from_messages(agent_context)
 
-        agent_context.append({"role": "assistant", "content": response})
+        #agent_context.append({"role": "assistant", "content": response})
 
         return response
 
 
 class Server:
-    def __init__(self, host, port , model_name="abdouaziiz/wav2vec2-xls-r-300m-wolof"):
+    def __init__(self, host, port , model_name="jonatasgrosman/wav2vec2-large-xlsr-53-french"):
         self.host = host
         self.port = port
         self.speech2text = Speech2Text()
@@ -95,7 +97,6 @@ class Server:
             try:
                 data = await websocket.recv()
                 text = self.speech2text(data)
-                await asyncio.sleep(1)
                 text = self.agent(text)
                 await websocket.send(json.dumps({"text": text}))
             except websockets.exceptions.ConnectionClosedError as e:

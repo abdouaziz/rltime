@@ -5,6 +5,8 @@ import json
 from config import settings
 from server import logger
 
+from langdetect import detect
+
 from gtts import gTTS
 import pygame
 from io import BytesIO
