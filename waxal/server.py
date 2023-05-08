@@ -86,7 +86,7 @@ class Agent:
 
 
 class Server:
-    def __init__(self, host, port , model_name="jonatasgrosman/wav2vec2-large-xlsr-53-french"):
+    def __init__(self, host, port):
         self.host = host
         self.port = port
         self.speech2text = Speech2Text()
